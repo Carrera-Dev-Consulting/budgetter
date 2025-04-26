@@ -65,11 +65,19 @@ class Debt(BaseModel):
         mode="before",
     )
     def validate_amount(cls, v):
-        return parse_currency(v, pattern)
+        if isinstance(v, str):
+            return parse_currency(v, pattern)
+        else:
+            return v
 
     @field_validator("due_date", mode="before")
     def validate_due_date(cls, v):
-        return datetime.datetime.strptime(v, "%m/%d/%Y").date()
+        if isinstance(v, str):
+            if v == "":
+                return datetime.date.today()
+            return datetime.datetime.strptime(v, "%m/%d/%Y").date()
+
+        return v
 
 
 def _parse_file_as_model(file_path: str, model: type[BaseModel]):

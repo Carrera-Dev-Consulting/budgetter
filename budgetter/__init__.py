@@ -4,6 +4,7 @@ import datetime
 import click
 
 from budgetter.account import Account
+from budgetter.best_fit import find_best_fit
 from budgetter.budget import Budget
 from budgetter.parse import (
     Debt,
@@ -192,3 +193,48 @@ def handle_incomes(budget: Budget, checking: Account, income: Income):
         income.amount,
         income.pay_date,
     )
+
+
+@main.command("best-fit")
+@click.option(
+    "-d",
+    "--debts",
+    type=click.Path(
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    help="List of debts you want to work against.",
+    required=True,
+)
+@click.option(
+    "-o",
+    "--output",
+    help="The file to write the loans that you would best pay off with.",
+    type=click.Path(writable=True),
+    default="best-fit.csv",
+)
+@click.option(
+    "--limit",
+    "-l",
+    help="The most amount of money you have to pay off the debts so far.",
+    type=click.FLOAT,
+    required=True,
+)
+def best_fit(
+    debts: str,
+    output: str,
+    limit: int,
+):
+    debts = parse_debts(debts)
+    best_fit = find_best_fit(debts, limit)
+    print("Best fit:")
+    for debt in best_fit:
+        print(debt)
+    print("Cost: ", sum(d.current_balance for d in best_fit))
+    print("Monthly Savings: ", sum(d.monthly for d in best_fit))
+    with open(output, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=Debt.model_fields.keys())
+        writer.writeheader()
+        for debt in best_fit:
+            writer.writerow(debt.model_dump(mode="json"))
