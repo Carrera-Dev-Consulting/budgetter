@@ -4,7 +4,7 @@ import datetime
 import click
 
 from budgetter.account import Account
-from budgetter.best_fit import find_best_fit
+from budgetter.best_fit import FitChoice, find_best_fit
 from budgetter.budget import Budget
 from budgetter.parse import (
     Debt,
@@ -221,18 +221,32 @@ def handle_incomes(budget: Budget, checking: Account, income: Income):
     type=click.FLOAT,
     required=True,
 )
+@click.option(
+    "--kind",
+    "-k",
+    help="The kind of best fit you want to find.",
+    type=click.Choice(FitChoice),
+    default=FitChoice.MONTHLY_SAVINGS,
+)
 def best_fit(
     debts: str,
     output: str,
-    limit: int,
+    limit: float,
+    kind: FitChoice,
 ):
+    print(f"Inputs: {debts}, {limit}, {kind}, {output}")
     debts = parse_debts(debts)
-    best_fit = find_best_fit(debts, limit)
+    best_fit = find_best_fit(
+        debts,
+        limit,
+        kind,
+    )
     print("Best fit:")
     for debt in best_fit:
         print(debt)
     print("Cost: ", sum(d.current_balance for d in best_fit))
     print("Monthly Savings: ", sum(d.monthly for d in best_fit))
+    print("Total Closed Debts: ", len(best_fit))
     with open(output, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=Debt.model_fields.keys())
         writer.writeheader()

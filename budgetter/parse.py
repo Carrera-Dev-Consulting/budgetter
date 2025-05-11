@@ -59,6 +59,9 @@ class Debt(BaseModel):
     due_date: datetime.date = Field(alias=AliasChoices("due_date", "Due Date"))
     debt_type: str = Field(alias=AliasChoices("debt_type", "Debt Type"))
 
+    def __str__(self):
+        return f"{self.name}, ${self.current_balance:,.2f} (${self.monthly:,.2f}), {self.due_date.isoformat()}, {self.debt_type}"
+
     @field_validator(
         "monthly",
         "current_balance",

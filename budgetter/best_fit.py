@@ -1,8 +1,13 @@
-from collections import defaultdict
 from copy import deepcopy
 from functools import cache
 from typing import Iterable, TypeVar
 from budgetter.parse import Debt
+from enum import Enum
+
+
+class FitChoice(str, Enum):
+    MONTHLY_SAVINGS = "monthly-savings"
+    MOST_DEBTS = "most-debts"
 
 
 class KnapSack:
@@ -46,7 +51,7 @@ def subsets(items: list[TValue]) -> Iterable[list[TValue]]:
 def knapsack(items: list[Debt], limit: int) -> list[Debt]:
     @cache
     def _knapsack(index: int, value: int) -> KnapSack:
-        if index == len(items) or value == 0:
+        if index == len(items) or value <= 0:
             return KnapSack()
 
         best_value = _knapsack(index + 1, value)
@@ -60,10 +65,29 @@ def knapsack(items: list[Debt], limit: int) -> list[Debt]:
     return _knapsack(0, limit).items
 
 
-def find_best_fit(debts: list[Debt], limit: int) -> list[Debt]:
+def find_best_fit(
+    debts_to_payoff: list[Debt],
+    limit: float,
+    kind: FitChoice = FitChoice.MONTHLY_SAVINGS,
+) -> list[Debt]:
     all_payable_debts = [
-        d for d in debts if d.current_balance > 0 and d.current_balance <= limit
+        d
+        for d in debts_to_payoff
+        if d.current_balance > 0 and d.current_balance <= limit
     ]
+
+    if kind == FitChoice.MOST_DEBTS:
+        # Basically we just want to clear as many as we can
+        all_payable_debts.sort(key=lambda d: d.current_balance)
+        total = 0
+        debts_to_payoff = []
+        while total < limit and len(all_payable_debts) > 0:
+            if total + all_payable_debts[0].current_balance > limit:
+                break
+            total += all_payable_debts[0].current_balance
+            debts_to_payoff.append(all_payable_debts.pop(0))
+        return debts_to_payoff
+
     # sort by balance then by monthly
     all_payable_debts.sort(key=lambda d: (d.current_balance, d.monthly))
 
